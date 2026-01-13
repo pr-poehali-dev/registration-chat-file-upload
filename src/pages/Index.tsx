@@ -52,7 +52,11 @@ interface Chat {
   clientOnline: boolean;
   lastMessage?: string;
   unreadCount: number;
+  caseStatus?: 'new' | 'in_progress' | 'waiting_docs' | 'completed';
+  caseTitle?: string;
 }
+
+type ClientSection = 'chat' | 'cabinet';
 
 export default function Index() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -62,6 +66,7 @@ export default function Index() {
   const [messageInput, setMessageInput] = useState('');
   const [clients, setClients] = useState<Chat[]>([]);
   const [selectedChatId, setSelectedChatId] = useState<string>('');
+  const [clientSection, setClientSection] = useState<ClientSection>('chat');
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -113,7 +118,9 @@ export default function Index() {
           managerId: MANAGER_ID,
           managerName: MANAGER_NAME,
           clientOnline: true,
-          unreadCount: 0
+          unreadCount: 0,
+          caseStatus: 'in_progress',
+          caseTitle: 'Регистрация ООО'
         };
         setClients([newChat]);
         setSelectedChatId(chatId);
@@ -127,7 +134,9 @@ export default function Index() {
             managerName: MANAGER_NAME,
             clientOnline: true,
             lastMessage: 'Добрый день, когда можно получить документы?',
-            unreadCount: 2
+            unreadCount: 2,
+            caseStatus: 'waiting_docs',
+            caseTitle: 'Ликвидация ООО'
           },
           {
             id: 'chat-demo-2',
@@ -137,7 +146,9 @@ export default function Index() {
             managerName: MANAGER_NAME,
             clientOnline: false,
             lastMessage: 'Спасибо за помощь!',
-            unreadCount: 0
+            unreadCount: 0,
+            caseStatus: 'completed',
+            caseTitle: 'Регистрация ИП'
           },
           {
             id: 'chat-demo-3',
@@ -147,7 +158,9 @@ export default function Index() {
             managerName: MANAGER_NAME,
             clientOnline: true,
             lastMessage: 'Загрузил договор',
-            unreadCount: 1
+            unreadCount: 1,
+            caseStatus: 'in_progress',
+            caseTitle: 'Получение лицензии'
           }
         ];
         setClients(demoClients);
@@ -243,6 +256,52 @@ export default function Index() {
     return `${firstName[0]}${lastName[0]}`.toUpperCase();
   };
 
+  const downloadAllFiles = () => {
+    if (chatFiles.length === 0) {
+      toast({
+        title: "Нет файлов",
+        description: "В этом чате нет загруженных файлов",
+        className: "bg-card border-primary/20"
+      });
+      return;
+    }
+
+    chatFiles.forEach(file => {
+      if (file.url) {
+        const link = document.createElement('a');
+        link.href = file.url;
+        link.download = file.name;
+        link.click();
+      }
+    });
+
+    toast({
+      title: "Файлы выгружаются",
+      description: `Загружается ${chatFiles.length} файлов`,
+      className: "bg-card border-primary/20"
+    });
+  };
+
+  const getCaseStatusText = (status?: string) => {
+    switch (status) {
+      case 'new': return 'Новое дело';
+      case 'in_progress': return 'В работе';
+      case 'waiting_docs': return 'Ожидание документов';
+      case 'completed': return 'Завершено';
+      default: return 'В работе';
+    }
+  };
+
+  const getCaseStatusColor = (status?: string) => {
+    switch (status) {
+      case 'new': return 'bg-blue-500/20 text-blue-400 border-blue-500/30';
+      case 'in_progress': return 'bg-primary/20 text-primary border-primary/30';
+      case 'waiting_docs': return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
+      case 'completed': return 'bg-green-500/20 text-green-400 border-green-500/30';
+      default: return 'bg-primary/20 text-primary border-primary/30';
+    }
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
@@ -253,15 +312,17 @@ export default function Index() {
         <Card className="w-full max-w-md shadow-2xl relative z-10 border-primary/20 bg-card/95 backdrop-blur">
           <CardHeader className="space-y-1 pb-6 text-center">
             <div className="flex items-center justify-center mb-6">
-              <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg">
-                <Icon name="Crown" className="h-9 w-9 text-primary-foreground" />
-              </div>
+              <img 
+                src="https://cdn.poehali.dev/files/photo_2025-04-08_16-34-49.jpg" 
+                alt="Альтрон"
+                className="h-24 w-24 object-contain"
+              />
             </div>
             <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary via-primary/80 to-primary bg-clip-text text-transparent">
-              Премиум сервис
+              Альтрон
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              Персональное обслуживание для каждого клиента
+              Юридическая компания
             </p>
           </CardHeader>
           <CardContent>
@@ -324,17 +385,46 @@ export default function Index() {
   return (
     <div className="min-h-screen bg-background flex">
       <aside className="w-80 bg-sidebar border-r border-sidebar-border flex flex-col shadow-xl">
-        <div className="p-6 border-b border-sidebar-border/50">
+        <div className="p-6 border-b border-sidebar-border/50 bg-gradient-to-br from-sidebar-background via-sidebar-background to-primary/5">
           <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center shadow-lg">
-              <Icon name="Crown" className="h-7 w-7 text-primary-foreground" />
-            </div>
+            <img 
+              src="https://cdn.poehali.dev/files/photo_2025-04-08_16-34-49.jpg" 
+              alt="Альтрон"
+              className="h-14 w-14 object-contain"
+            />
             <div>
-              <h1 className="font-bold text-xl text-sidebar-foreground">LuxChat</h1>
-              <p className="text-xs text-sidebar-foreground/60">Премиум сервис</p>
+              <h1 className="font-bold text-xl text-primary">Альтрон</h1>
+              <p className="text-xs text-sidebar-foreground/70">Юридическая компания</p>
             </div>
           </div>
         </div>
+
+        {user?.role === 'client' && (
+          <nav className="flex-1 p-3 space-y-1">
+            <button
+              onClick={() => setClientSection('chat')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                clientSection === 'chat'
+                  ? 'bg-sidebar-accent border border-primary/30 text-primary shadow-md'
+                  : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/50 border border-transparent'
+              }`}
+            >
+              <Icon name="MessageSquare" size={20} />
+              <span className="font-medium">Чат с менеджером</span>
+            </button>
+            <button
+              onClick={() => setClientSection('cabinet')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                clientSection === 'cabinet'
+                  ? 'bg-sidebar-accent border border-primary/30 text-primary shadow-md'
+                  : 'text-sidebar-foreground/80 hover:bg-sidebar-accent/50 border border-transparent'
+              }`}
+            >
+              <Icon name="Briefcase" size={20} />
+              <span className="font-medium">Личный кабинет</span>
+            </button>
+          </nav>
+        )}
 
         {user?.role === 'manager' && (
           <>
@@ -416,7 +506,118 @@ export default function Index() {
       </aside>
 
       <main className="flex-1 flex flex-col">
-        {selectedChatId && currentChat && (
+        {user?.role === 'client' && clientSection === 'cabinet' && currentChat && (
+          <>
+            <header className="h-20 border-b border-border/50 bg-card/50 backdrop-blur px-6 flex items-center shadow-sm">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border-2 border-primary/30">
+                  <Icon name="Briefcase" className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-foreground">Личный кабинет</h2>
+                  <p className="text-sm text-muted-foreground">Информация о вашем деле</p>
+                </div>
+              </div>
+            </header>
+
+            <div className="flex-1 p-6 overflow-auto">
+              <div className="max-w-4xl mx-auto space-y-6">
+                <Card className="border-primary/20 bg-card/50 backdrop-blur shadow-xl">
+                  <CardHeader className="border-b border-primary/10">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle className="text-2xl mb-2">{currentChat.caseTitle}</CardTitle>
+                        <p className="text-muted-foreground">Ваш персональный менеджер: {MANAGER_NAME}</p>
+                      </div>
+                      <Badge className={`px-4 py-2 text-sm font-medium border ${getCaseStatusColor(currentChat.caseStatus)}`}>
+                        {getCaseStatusText(currentChat.caseStatus)}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-6 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Icon name="MessageSquare" className="h-5 w-5 text-primary" />
+                          </div>
+                          <p className="text-sm text-muted-foreground">Сообщений</p>
+                        </div>
+                        <p className="text-3xl font-bold text-primary">{chatMessages.length}</p>
+                      </div>
+
+                      <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Icon name="FileText" className="h-5 w-5 text-primary" />
+                          </div>
+                          <p className="text-sm text-muted-foreground">Документов</p>
+                        </div>
+                        <p className="text-3xl font-bold text-primary">{chatFiles.length}</p>
+                      </div>
+
+                      <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <Icon name="Clock" className="h-5 w-5 text-primary" />
+                          </div>
+                          <p className="text-sm text-muted-foreground">Статус</p>
+                        </div>
+                        <p className="text-sm font-semibold text-foreground">{getCaseStatusText(currentChat.caseStatus)}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <Icon name="FileText" className="h-5 w-5 text-primary" />
+                        Ваши документы
+                      </h3>
+                      {chatFiles.length === 0 ? (
+                        <div className="text-center py-8 border-2 border-dashed border-primary/20 rounded-lg">
+                          <Icon name="FolderOpen" size={40} className="mx-auto text-muted-foreground mb-3" />
+                          <p className="text-muted-foreground">Документов пока нет</p>
+                        </div>
+                      ) : (
+                        <div className="grid gap-3">
+                          {chatFiles.map((file) => (
+                            <div key={file.id} className="flex items-center gap-4 p-4 rounded-lg bg-card border border-primary/10 hover:border-primary/30 transition-colors">
+                              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                <Icon name="FileText" size={24} className="text-primary" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium truncate">{file.name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {file.uploadedAt.toLocaleDateString('ru-RU')} • {file.size}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
+                      <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                        <Icon name="Info" className="h-5 w-5 text-primary" />
+                        Информация
+                      </h3>
+                      <div className="space-y-2 text-sm">
+                        <p className="text-muted-foreground">
+                          По любым вопросам обращайтесь к вашему менеджеру через чат.
+                        </p>
+                        <p className="text-muted-foreground">
+                          Все обновления по делу будут отображаться в этом разделе.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </>
+        )}
+
+        {((user?.role === 'client' && clientSection === 'chat') || user?.role === 'manager') && selectedChatId && currentChat && (
           <>
             <header className="h-20 border-b border-border/50 bg-card/50 backdrop-blur px-6 flex items-center justify-between shadow-sm">
               <div className="flex items-center gap-4">
@@ -448,6 +649,17 @@ export default function Index() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {user?.role === 'manager' && chatFiles.length > 0 && (
+                  <Button 
+                    onClick={downloadAllFiles}
+                    variant="outline" 
+                    size="sm" 
+                    className="border-primary/30 hover:bg-primary/10 hover:border-primary/50"
+                  >
+                    <Icon name="Download" size={16} className="mr-2 text-primary" />
+                    Выгрузить все файлы ({chatFiles.length})
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" className="border-primary/20">
                   <Icon name="FolderOpen" size={16} className="mr-2 text-primary" />
                   Файлы ({chatFiles.length})
